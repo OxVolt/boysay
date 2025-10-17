@@ -31,8 +31,8 @@ static char* read_stdin_all(void) {
 }
 
 
-static char* join_args_skipping_flags(int argc, char **argv, const char **out_size) {
-    const char *size = "small"; // default
+static char* join_args_skipping_flags(int argc, char **argv, char **out_size){
+    char *size = "small"; // default
     // build message in a buffer
     static char msg[MAX_MSG_LEN];
     msg[0] = '\0';
@@ -176,7 +176,7 @@ static void print_bubble(const char *msg) {
         printf(" >\n");
     } else {
         // multi-line style:
-        // / line1 \
+        /* / line1 \ */
         // | ...   |
         // \ lineN /
         printf("/ %s", lines[0]);
@@ -226,7 +226,7 @@ static void print_ascii_from_file(const char *size) {
 }
 
 int main(int argc, char **argv) {
-    const char *size = NULL;
+    char *size = NULL;
     char *msg = join_args_skipping_flags(argc, argv, &size);
 
     char *final_msg = NULL;

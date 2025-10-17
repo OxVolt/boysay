@@ -35,6 +35,10 @@ static char* join_args_skipping_flags(int argc, char **argv, const char **out_si
             die("message too long");
         if (msg[0] != '\0') strcat(msg, " ");
         strcat(msg, argv[i]);
+
+    }
+    if(argc == 1){
+        strcat(msg, "You like kissing boys don't you?");
     }
     *out_size = size;
     if (msg[0] == '\0') return NULL; // means: read from stdin

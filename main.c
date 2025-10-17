@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #define MAX_MSG_LEN 4096
 #define WRAP_WIDTH  40
@@ -11,14 +12,24 @@ static void die(const char *msg) {
     exit(EXIT_FAILURE);
 }
 
-static char* read_stdin_line(void) {
+static char* read_stdin_all(void) {
     static char buf[MAX_MSG_LEN];
-    if (!fgets(buf, sizeof(buf), stdin)) {
-        die("no input provided on stdin");
+    size_t len = 0;
+    int c;
+
+    while ((c = fgetc(stdin)) != EOF) {
+        if (len + 1 >= sizeof(buf))
+            die("input too long");
+        buf[len++] = (char)c;
     }
-    buf[strcspn(buf, "\n")] = 0;
+    buf[len] = '\0';
+
+    // Supprime un éventuel dernier '\n' inutile
+    if (len > 0 && buf[len - 1] == '\n') buf[len - 1] = '\0';
+
     return buf;
 }
+
 
 static char* join_args_skipping_flags(int argc, char **argv, const char **out_size) {
     const char *size = "small"; // default
@@ -37,11 +48,12 @@ static char* join_args_skipping_flags(int argc, char **argv, const char **out_si
         strcat(msg, argv[i]);
 
     }
-    if(argc == 1){
-        strcat(msg, "You like kissing boys don't you?");
-    }
+
     *out_size = size;
     if (msg[0] == '\0') return NULL; // means: read from stdin
+
+
+
     return msg;
 }
 
@@ -50,31 +62,47 @@ static char* join_args_skipping_flags(int argc, char **argv, const char **out_si
 // Caller must free all lines and the array.
 static void wrap_text(const char *text, int width, char ***out_lines, size_t *out_count) {
     if (width < 5) width = 5;
+
+    // Copie de travail + nettoyage basique
     char *work = strdup(text ? text : "");
     if (!work) die("oom");
+    for (char *p = work; *p; p++) {
+        if (*p == '\t') *p = ' '; // remplacer tabulations
+    }
+
     char **lines = NULL;
     size_t count = 0, cap = 0;
 
     char *p = work;
+    bool first_line = true;
+
     while (*p) {
-        // skip leading spaces
-        while (*p == ' ') p++;
+        // On saute les espaces seulement avant la toute première ligne
+        if (first_line) {
+            while (*p == ' ') p++;
+            first_line = false;
+        }
+
         if (*p == '\0') break;
 
         size_t take = 0;
         size_t last_space = 0;
+
+        // Cherche jusqu'à la largeur max ou un saut de ligne
         while (p[take] && p[take] != '\n' && take < (size_t)width) {
             if (p[take] == ' ') last_space = take;
             take++;
         }
 
         size_t cut = take;
-        if (p[cut] && p[cut] != '\n' && last_space > 0) {
-            cut = last_space; // break at last space within width
-        } else if (p[cut] == '\n') {
-            // explicit newline within width
+        if (p[cut] == '\n') {
+            // On s'arrête au saut de ligne explicite
+        } else if (p[cut] && p[cut] != '\n' && last_space > 0) {
+            // Si on dépasse la largeur, on coupe au dernier espace
+            cut = last_space;
         }
 
+        // Allocation dynamique du tableau de lignes
         if (cap == count) {
             cap = cap ? cap * 2 : 8;
             char **tmp = realloc(lines, cap * sizeof(*lines));
@@ -82,26 +110,29 @@ static void wrap_text(const char *text, int width, char ***out_lines, size_t *ou
             lines = tmp;
         }
 
+        // Longueur du segment (sans les espaces de fin)
         size_t seglen = cut;
-        while (seglen > 0 && p[seglen - 1] == ' ') seglen--; // trim end spaces
-        char *line = (char*)malloc(seglen + 1);
+        while (seglen > 0 && p[seglen - 1] == ' ') seglen--;
+
+        // Copie du segment dans une nouvelle ligne
+        char *line = malloc(seglen + 1);
         if (!line) die("oom");
         memcpy(line, p, seglen);
         line[seglen] = '\0';
         lines[count++] = line;
 
-        // advance p
+        // Avance le pointeur dans le texte
         if (p[cut] == '\n') {
-            p += cut + 1;
+            p += cut + 1; // saute le \n
         } else if (p[cut] == '\0') {
             p += cut;
         } else {
-            // p[cut] is space or char after max width
             p += cut;
-            while (*p == ' ') p++; // skip following spaces
+            while (*p == ' ') p++; // saute les espaces inutiles entre mots
         }
     }
 
+    // Si aucun texte n’a été capturé, créer une ligne vide
     if (count == 0) {
         lines = malloc(sizeof(*lines));
         if (!lines) die("oom");
@@ -113,6 +144,7 @@ static void wrap_text(const char *text, int width, char ***out_lines, size_t *ou
     *out_lines = lines;
     *out_count = count;
 }
+
 
 static void free_lines(char **lines, size_t n) {
     for (size_t i = 0; i < n; i++) free(lines[i]);
@@ -199,11 +231,19 @@ int main(int argc, char **argv) {
 
     char *final_msg = NULL;
     if (!msg) {
-        // no args → read from stdin
-        final_msg = read_stdin_line();
+        if (isatty(STDIN_FILENO)) {
+            // Pas de pipe ni de redirection → message par défaut
+            final_msg = "You like kissing boys don't you?";
+        } else {
+            final_msg = read_stdin_all();
+            if(final_msg[0] == '\0'){
+                final_msg = "You like kissing boys don't you?";
+            }
+        }
     } else {
         final_msg = msg;
     }
+
 
     print_bubble(final_msg);
     print_tail();

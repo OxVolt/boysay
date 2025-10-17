@@ -1,0 +1,26 @@
+# Compiled binary
+boysay
+boysay.exe
+
+# Object files
+*.o
+*.obj
+
+# Backup / temp files
+*~
+*.swp
+*.tmp
+
+# Build directories
+/build/
+/bin/
+/dist/
+
+# macOS
+.DS_Store
+
+# Linux
+*.out
+
+# Windows
+Thumbs.db

@@ -10,7 +10,7 @@
 #define WRAP_WIDTH  40
 
 // ------------------------------------------------------------
-// Gestion d'erreur
+// Error handling
 // ------------------------------------------------------------
 static void die(const char *msg) {
     fprintf(stderr, "Error: %s\n", msg);
@@ -18,7 +18,7 @@ static void die(const char *msg) {
 }
 
 // ------------------------------------------------------------
-// Lecture du message (stdin ou arguments)
+// Reading the message (stdin or arguments)
 // ------------------------------------------------------------
 static char* read_stdin_all(void) {
     static char buf[MAX_MSG_LEN];
@@ -57,20 +57,20 @@ static char* join_args_skipping_flags(int argc, char **argv, char **out_size) {
 }
 
 // ------------------------------------------------------------
-// Mise en forme du texte (bulles de texte)
+// Text formatting (text bubbles)
 // ------------------------------------------------------------
 static void wrap_text(const char *text, int width, char ***out_lines, size_t *out_count) {
     if (width < 5) width = 5;
     char *work = strdup(text ? text : "");
     if (!work) die("oom");
 
-    // Remplace les tabulations par des espaces
+    // Replaces tabs with spaces
     for (char *p = work; *p; p++) {
         if (*p == '\t')
             *p = ' ';
     }
 
-    // Prépare la liste de lignes
+    // Prepare the list of lines
     char **lines = NULL;
     size_t count = 0, cap = 0;
     char *p = work;
@@ -177,24 +177,24 @@ static void print_tail(void) {
 }
 
 // ------------------------------------------------------------
-// Lecture de l'ASCII art (local ou installé)
+// Reading ASCII art (local or installed)
 // ------------------------------------------------------------
 static void print_ascii_from_file(const char *size) {
     char path[512];
     FILE *f = NULL;
 
-    // 1️⃣ — Cherche dans le dossier local (dev)
+    // Search in the local folder (dev)
     snprintf(path, sizeof(path), "ASCII/%s/default.txt", size);
     f = fopen(path, "r");
 
-    // 2️⃣ — Si pas trouvé, cherche dans le dossier d’installation
+    // If not found, search in the installation folder
     if (!f) {
         snprintf(path, sizeof(path),
                  "/usr/local/share/boysay/ASCII/%s/default.txt", size);
         f = fopen(path, "r");
     }
 
-    // 3️⃣ — Fallback minimal si introuvable
+    // Minimal fallback if not found
     if (!f) {
         fprintf(stderr, "Warning: could not find ASCII art for size '%s'\n", size);
         printf("   🧍‍♂️ You like kissing boys, don't you?\n");
@@ -208,7 +208,7 @@ static void print_ascii_from_file(const char *size) {
 }
 
 // ------------------------------------------------------------
-// Programme principal
+// Main program
 // ------------------------------------------------------------
 int main(int argc, char **argv) {
     char *size = NULL;

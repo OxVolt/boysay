@@ -35,8 +35,9 @@ static char* read_stdin_all(void) {
     return buf;
 }
 
-static char* join_args_skipping_flags(int argc, char **argv, char **out_size) {
+static char* join_args_skipping_flags(int argc, char **argv, char **out_size, char **out_flag) {
     char *size = "small"; // default
+    char *flag = "default"; // default
     static char msg[MAX_MSG_LEN];
     msg[0] = '\0';
 
@@ -44,6 +45,10 @@ static char* join_args_skipping_flags(int argc, char **argv, char **out_size) {
         if (strcmp(argv[i], "-ss") == 0) { size = "small";  continue; }
         if (strcmp(argv[i], "-sm") == 0) { size = "medium"; continue; }
         if (strcmp(argv[i], "-sb") == 0) { size = "big";    continue; }
+        
+        if (strcmp(argv[i], "-d") == 0) { flag = "default";    continue; }
+        if (strcmp(argv[i], "-c") == 0) { flag = "cute";    continue; }
+        if (strcmp(argv[i], "-s") == 0) { flag = "standing";    continue; }
 
         if (strlen(msg) + strlen(argv[i]) + 1 >= sizeof(msg))
             die("message too long");
@@ -52,6 +57,7 @@ static char* join_args_skipping_flags(int argc, char **argv, char **out_size) {
     }
 
     *out_size = size;
+    *out_flag = flag;
     if (msg[0] == '\0') return NULL;
     return msg;
 }
@@ -179,18 +185,18 @@ static void print_tail(void) {
 // ------------------------------------------------------------
 // Reading ASCII art (local or installed)
 // ------------------------------------------------------------
-static void print_ascii_from_file(const char *size) {
+static void print_ascii_from_file(const char *size, const char *flag) {
     char path[512];
     FILE *f = NULL;
 
     // Search in the local folder (dev)
-    snprintf(path, sizeof(path), "ASCII/%s/default.txt", size);
+    snprintf(path, sizeof(path), "ASCII/%s/%s.txt", size, flag);
     f = fopen(path, "r");
 
     // If not found, search in the installation folder
     if (!f) {
         snprintf(path, sizeof(path),
-                 "/usr/local/share/boysay/ASCII/%s/default.txt", size);
+                 "/usr/local/share/boysay/ASCII/%s/%s.txt", size, flag);
         f = fopen(path, "r");
     }
 
@@ -212,7 +218,8 @@ static void print_ascii_from_file(const char *size) {
 // ------------------------------------------------------------
 int main(int argc, char **argv) {
     char *size = NULL;
-    char *msg = join_args_skipping_flags(argc, argv, &size);
+    char *flag = NULL;
+    char *msg = join_args_skipping_flags(argc, argv, &size, &flag);
 
     char *final_msg = NULL;
     if (!msg) {
@@ -229,6 +236,6 @@ int main(int argc, char **argv) {
 
     print_bubble(final_msg);
     print_tail();
-    print_ascii_from_file(size);
+    print_ascii_from_file(size, flag);
     return 0;
 }
